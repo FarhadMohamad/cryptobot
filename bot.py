@@ -2,13 +2,10 @@ import pandas as pd
 import datetime
 from binance.client import Client
 import streamlit as st
-from dotenv import load_dotenv
-import os
 
-# === Load API credentials from .env ===
-load_dotenv()
-API_KEY = os.getenv("BINANCE_API_KEY")
-API_SECRET = os.getenv("BINANCE_API_SECRET")
+# === Load API credentials from Streamlit Secrets ===
+API_KEY = st.secrets["BINANCE_API_KEY"]
+API_SECRET = st.secrets["BINANCE_API_SECRET"]
 
 # === Streamlit UI ===
 st.set_page_config(page_title="Grid Trading Bot", layout="wide")
@@ -103,4 +100,4 @@ if run_bot and API_KEY and API_SECRET:
         st.line_chart(df_prices['price'])
 
 elif run_bot:
-    st.error("Missing Binance API Key or Secret in your .env file.")
+    st.error("Missing Binance API Key or Secret in your Streamlit secrets configuration.")
