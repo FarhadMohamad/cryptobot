@@ -3,14 +3,14 @@ import datetime
 from binance.client import Client
 import streamlit as st
 
-# === Load API credentials from Streamlit Secrets ===
-API_KEY = st.secrets["BINANCE_API_KEY"]
-API_SECRET = st.secrets["BINANCE_API_SECRET"]
-
 # === Streamlit UI ===
 st.set_page_config(page_title="Grid Trading Bot", layout="wide")
 st.title("📈 DOGEUSDT Grid Trading Backtest")
-st.write("Simulate a grid trading strategy using real Binance data.")
+st.write("Simulate a grid trading strategy using Binance Testnet.")
+
+# === Testnet Binance credentials (replace with your testnet keys) ===
+API_KEY = st.secrets["BINANCE_TESTNET_API_KEY"]
+API_SECRET = st.secrets["BINANCE_TESTNET_API_SECRET"]
 
 # === Layout: All inputs on left except start/end dates on right ===
 left, right = st.columns([2, 1])
@@ -33,18 +33,23 @@ if run_bot and API_KEY and API_SECRET:
     if GRID_SPACING <= 0:
         st.error("Grid Spacing must be greater than 0.")
     else:
-        # === Initialize Binance Client with test ===
+        # === Initialize Binance Client (Testnet) ===
         try:
             client = Client(API_KEY, API_SECRET)
-            client.ping()  # Test connection to Binance
-            st.success("✅ Successfully connected to Binance API.")
+            client.API_URL = 'https://testnet.binance.vision/api'
+            client.ping()
+            st.success("✅ Connected to Binance Testnet API.")
         except Exception as e:
-            st.error(f"❌ Failed to connect to Binance API: {e}")
+            st.error(f"❌ Failed to connect to Binance Testnet API: {e}")
             st.stop()
 
         # === Fetch historical data ===
-        st.write("Fetching historical data from Binance API...")
-        klines = client.get_historical_klines(SYMBOL, Client.KLINE_INTERVAL_1HOUR, str(start_date), str(end_date))
+        st.write("Fetching historical data...")
+        try:
+            klines = client.get_historical_klines(SYMBOL, Client.KLINE_INTERVAL_1HOUR, str(start_date), str(end_date))
+        except Exception as e:
+            st.error(f"Failed to fetch historical data: {e}")
+            st.stop()
 
         # Convert to DataFrame
         df_all = pd.DataFrame(klines, columns=[
