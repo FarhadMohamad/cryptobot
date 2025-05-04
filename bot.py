@@ -33,8 +33,14 @@ if run_bot and API_KEY and API_SECRET:
     if GRID_SPACING <= 0:
         st.error("Grid Spacing must be greater than 0.")
     else:
-        # === Initialize Binance Client ===
-        client = Client(API_KEY, API_SECRET)
+        # === Initialize Binance Client with test ===
+        try:
+            client = Client(API_KEY, API_SECRET)
+            client.ping()  # Test connection to Binance
+            st.success("✅ Successfully connected to Binance API.")
+        except Exception as e:
+            st.error(f"❌ Failed to connect to Binance API: {e}")
+            st.stop()
 
         # === Fetch historical data ===
         st.write("Fetching historical data from Binance API...")
