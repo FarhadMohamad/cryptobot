@@ -8,16 +8,20 @@ st.set_page_config(page_title="KuCoin Grid Trading Backtest", layout="wide")
 st.title("📉 KuCoin Grid Trading Backtest")
 st.write("Simulate a grid trading strategy using historical KuCoin data.")
 
-# === Layout: Left for inputs, right for date range ===
+st.markdown("""
+### ℹ️ What is Grid Trading?
+
+Grid trading is an automated strategy that places buy and sell orders at fixed price levels.  
+It buys when the price drops and sells when it rises, aiming to profit from market fluctuations  
+without needing to predict direction.
+""")
+
+# === Layout: Left for controls, right for dates ===
 left, right = st.columns([2, 1])
 
-# Static symbol list (expand or fetch dynamically later)
+# Static list of trading pairs (can be expanded)
 available_pairs = [
-    "DOGE-USDT",
-    "BTC-USDT",
-    "ETH-USDT",
-    "SOL-USDT",
-    "XRP-USDT"
+    "DOGE-USDT", "BTC-USDT", "ETH-USDT", "SOL-USDT", "XRP-USDT"
 ]
 
 with left:
@@ -47,11 +51,11 @@ if run_bot:
         st.stop()
 
     # === Fetch historical data ===
-    st.write("📥 Fetching historical data from KuCoin...")
+    st.write("📡 Fetching historical price data...")
     try:
         kline_data = market.get_kline(
-            symbol=SYMBOL,
-            kline_type='1hour',
+            SYMBOL,
+            '1hour',
             startAt=int(datetime.datetime.combine(start_date, datetime.time.min).timestamp()),
             endAt=int(datetime.datetime.combine(end_date, datetime.time.min).timestamp())
         )
@@ -60,10 +64,10 @@ if run_bot:
         st.stop()
 
     if not kline_data:
-        st.warning("No historical data returned for this period.")
+        st.warning("No price data returned. Try a different date range or pair.")
         st.stop()
 
-    # Convert to DataFrame
+    # Process Kline data into DataFrame
     df_all = pd.DataFrame(kline_data, columns=[
         'Time', 'Open', 'Close', 'High', 'Low', 'Volume', 'Turnover'
     ])
@@ -90,7 +94,7 @@ if run_bot:
     for time, price in df_prices['price'].items():
         now = time
 
-        # SELL logic
+        # SELL if price reached above buy+spacing
         for position in open_positions[:]:
             sell_price = position['buy_price'] + GRID_SPACING
             if price >= sell_price:
@@ -99,7 +103,7 @@ if run_bot:
                 trade_log.append([now, 'SELL', sell_price, profit])
                 open_positions.remove(position)
 
-        # BUY logic
+        # BUY if price hits level and not already bought
         for level in grid_levels:
             if price <= level and not is_already_bought(level):
                 open_positions.append({
@@ -110,7 +114,7 @@ if run_bot:
                 trade_log.append([now, 'BUY', level, TRADE_AMOUNT_USDT])
                 break
 
-    # === Show Results ===
+    # === Display Results ===
     df = pd.DataFrame(trade_log, columns=['Time', 'Action', 'Price', 'Amount/Profit'])
     st.subheader("📒 Trade Log")
     st.dataframe(df, use_container_width=True)
@@ -118,4 +122,5 @@ if run_bot:
     st.subheader("💰 Profit Summary")
     st.metric("Total Simulated Profit", f"${total_profit:.2f}")
 
+    st.subheader("📈 Price Chart")
     st.line_chart(df_prices['price'])
