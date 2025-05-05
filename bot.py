@@ -8,10 +8,10 @@ st.set_page_config(page_title="KuCoin Grid Trading Backtest", layout="wide")
 st.title("📉 KuCoin Grid Trading Backtest")
 st.write("Simulate a grid trading strategy using historical KuCoin data.")
 
-# === Layout: Left for controls, right for dates ===
+# === Layout: Left for inputs, right for date range ===
 left, right = st.columns([2, 1])
 
-# Static symbol list (you can expand this later or fetch dynamically)
+# Static symbol list (expand or fetch dynamically later)
 available_pairs = [
     "DOGE-USDT",
     "BTC-USDT",
@@ -46,19 +46,21 @@ if run_bot:
         st.error(f"❌ KuCoin connection failed: {e}")
         st.stop()
 
-    # === Fetch historical prices ===
-    st.write("Fetching historical data from KuCoin...")
-
+    # === Fetch historical data ===
+    st.write("📥 Fetching historical data from KuCoin...")
     try:
         kline_data = market.get_kline(
-        SYMBOL,
-        '1hour',
-        startAt=int(datetime.datetime.combine(start_date, datetime.time.min).timestamp()),
-        endAt=int(datetime.datetime.combine(end_date, datetime.time.min).timestamp())
-)
-
+            symbol=SYMBOL,
+            kline_type='1hour',
+            startAt=int(datetime.datetime.combine(start_date, datetime.time.min).timestamp()),
+            endAt=int(datetime.datetime.combine(end_date, datetime.time.min).timestamp())
+        )
     except Exception as e:
-        st.error(f"Failed to fetch Kline data: {e}")
+        st.error(f"❌ Failed to fetch Kline data: {e}")
+        st.stop()
+
+    if not kline_data:
+        st.warning("No historical data returned for this period.")
         st.stop()
 
     # Convert to DataFrame
@@ -77,7 +79,7 @@ if run_bot:
         grid_levels.append(round(level, 4))
         level += GRID_SPACING
 
-    # === Run Simulation ===
+    # === Grid Trading Simulation ===
     open_positions = []
     trade_log = []
     total_profit = 0
@@ -88,7 +90,7 @@ if run_bot:
     for time, price in df_prices['price'].items():
         now = time
 
-        # SELL
+        # SELL logic
         for position in open_positions[:]:
             sell_price = position['buy_price'] + GRID_SPACING
             if price >= sell_price:
@@ -97,7 +99,7 @@ if run_bot:
                 trade_log.append([now, 'SELL', sell_price, profit])
                 open_positions.remove(position)
 
-        # BUY
+        # BUY logic
         for level in grid_levels:
             if price <= level and not is_already_bought(level):
                 open_positions.append({
@@ -108,7 +110,7 @@ if run_bot:
                 trade_log.append([now, 'BUY', level, TRADE_AMOUNT_USDT])
                 break
 
-    # === Results ===
+    # === Show Results ===
     df = pd.DataFrame(trade_log, columns=['Time', 'Action', 'Price', 'Amount/Profit'])
     st.subheader("📒 Trade Log")
     st.dataframe(df, use_container_width=True)
